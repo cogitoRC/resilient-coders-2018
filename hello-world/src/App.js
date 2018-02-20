@@ -1,18 +1,20 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+
+
+import SidePanel from './SidePanel';
+import MainPanel from './MainPanel';
+import MyAppBar from './MyAppBar';
 
 class App extends Component {
+
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Welcome to React</h1>
-        </header>
-        <p className="App-intro">
-          To get started, edit <code>src/App.js</code> and save to reload.
-        </p>
+      <div style={{height: '100%', width: '100%', position: 'absolute'}}>
+        <MyAppBar />
+        <div style={{display: 'flex', height: '100%'}}>
+          <SidePanel />
+          <MainPanel />
+        </div>
       </div>
     );
   }

@@ -8,7 +8,6 @@ import Avatar from 'material-ui/Avatar';
 class MyCard extends Component {
   render() {
     const name = this.props.name;
-    console.log(name);
     const initial = name[0];
     return (
       <div>
@@ -21,7 +20,7 @@ class MyCard extends Component {
             <CardActions
               actAsExpander={true}
             >
-            <FlatButton lable="Expand" />
+            <FlatButton label="Expand" />
             </CardActions>
             <CardText expandable={true}>
               Aye look at this!!! This card is about how amazing {name} is!

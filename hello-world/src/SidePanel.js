@@ -6,7 +6,7 @@ class SidePanel extends Component {
     const names = ['Jim', 'Kordel', 'Sid', 'Julie', 'Carolyn'];
     return (
       <div style={{backgroundColor: 'blue', width: 250, height: '100%'}}>
-        {names.map(name => (<Card name={name} />))}
+        {names.map((name, i) => (<Card key={i} name={name} />))}
       </div>
     );
   }

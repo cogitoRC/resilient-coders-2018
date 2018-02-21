@@ -1,0 +1,556 @@
+https://medium.freecodecamp.org/how-to-make-create-react-app-work-with-a-node-backend-api-7c5c48acb1b0
+
+npm run eject
+npm install express --save
+npm install concurrently --save
+npm install nodemon --save
+
+add the following to the package.json:
+    {
+      "scripts": {
+        "client": "cd client && yarn start",
+        "server": "nodemon server.js",
+        "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
+      },
+    }
+
+create a server.js with the following contents:
+    const express = require('express');
+
+    const app = express();
+    const port = process.env.PORT || 5000;
+
+    app.get('/api/hello', (req, res) => {
+      res.send({ express: 'Hello From Express' });
+    });
+
+    app.listen(port, () => console.log(`Listening on port ${port}`));
+
+
+run node server.js to start express
+point browser at http://localhost:5000/api/hello
+
+add the following line to the package.json:
+    "proxy": "http://localhost:5000",
+
+add the following to App.js:
+      state = {
+        response: '',
+      };
+
+      componentDidMount() {
+        this.callApi()
+          .then(res => this.setState({ response: res.express }))
+          .catch(err => console.log(err));
+      }
+
+      callApi = async () => {
+        const response = await fetch('/api/hello');
+        const body = await response.json();
+        if (response.status !== 200) {
+          throw Error(body.message);
+        }
+        return body;
+      }
+
+
+start the local dev server (while still running express):
+    npm start
+
+open chrome dev tools and see "hello from express" in the console
+
+===============================================================================
+part 2 install twilio node package
+https://github.com/TwilioDevEd/client-quickstart-node
+
+npm install twilio --save
+
+make server.json look like this:
+  const express = require('express');
+  const http = require('http');
+  const path = require('path');
+  const bodyParser = require('body-parser');
+  const router = require('./router');
+
+  const app = express();
+  const port = process.env.PORT || 5000;
+
+  // Create Express webapp
+  app.use(express.static(path.join(__dirname, 'public')));
+  app.use(bodyParser.urlencoded({extended: false}));
+  app.use(router);
+
+  // Create http server and run it
+  const server = http.createServer(app);
+
+  server.listen(port, function() {
+    console.log('Express server running on *:' + port);
+  });
+
+create handler.js (root level):
+  const ClientCapability = require('twilio').jwt.ClientCapability;
+  const VoiceResponse = require('twilio').twiml.VoiceResponse;
+
+  const nameGenerator = require('./name_generator');
+  const config = require('./config');
+
+  exports.tokenGenerator = function tokenGenerator() {
+    const identity = nameGenerator();
+    const capability = new ClientCapability({
+      accountSid: config.accountSid,
+      authToken: config.authToken,
+    });
+
+    capability.addScope(new ClientCapability.IncomingClientScope(identity));
+    capability.addScope(new ClientCapability.OutgoingClientScope({
+      applicationSid: config.twimlAppSid,
+      clientName: identity,
+    }));
+
+    // Include identity and token in a JSON response
+    return {
+      identity: identity,
+      token: capability.toJwt(),
+    };
+  };
+
+  exports.voiceResponse = function voiceResponse(toNumber) {
+    // Create a TwiML voice response
+    const twiml = new VoiceResponse();
+
+    if(toNumber) {
+      // Wrap the phone number or client name in the appropriate TwiML verb
+      // if is a valid phone number
+      const attr = isAValidPhoneNumber(toNumber) ? 'number' : 'client';
+
+      const dial = twiml.dial({
+        callerId: config.callerId,
+      });
+      dial[attr]({}, toNumber);
+    } else {
+      twiml.say('Thanks for calling!');
+    }
+
+    return twiml.toString();
+  };
+
+  /**
+  * Checks if the given value is valid as phone number
+  * @param {Number|String} number
+  * @return {Boolean}
+  */
+  function isAValidPhoneNumber(number) {
+    return /^[\d\+\-\(\) ]+$/.test(number);
+  }
+
+create router.js (root level):
+  const Router = require('express').Router;
+
+  const {tokenGenerator, voiceResponse} = require('./handler');
+
+  const router = new Router();
+
+  /**
+   * Generate a Capability Token for a Twilio Client user - it generates a random
+   * username for the client requesting a token.
+   */
+  router.get('/token', (req, res) => {
+    res.send(tokenGenerator());
+  });
+
+  router.post('/voice', (req, res) => {
+    res.set('Content-Type', 'text/xml');
+    res.send(voiceResponse(req.body.To));
+  });
+
+  router.get('/api/hello', (req, res) => {
+    res.send({ express: 'Hello From Express' });
+  });
+
+  module.exports = router;
+
+===============================================================================
+download and install ngrok
+https://ngrok.com/download
+  [14] > cp ~/Downloads/ngrok-stable-darwin-amd64.zip .
+  jgoddard-mbp.local (dev *) ~/git/resilient-coders/create-react-app/hello-world
+  [15] > unzip ngrok-stable-darwin-amd64.zip
+  Archive:  ngrok-stable-darwin-amd64.zip
+    inflating: ngrok
+
+start ngrok:
+
+./ngrok http 3000
+
+
+create a .env with the following contents (in the root dir):
+  TWILIO_ACCOUNT_SID=AC673a035766443deae72537fe1c3382a8
+  TWILIO_AUTH_TOKEN=0aa9255e17e571046430e38fb0458e51
+  TWILIO_TWIML_APP_SID=AP999fdb43db9a98c1c823accb5f2f45ea
+  TWILIO_CALLER_ID=+18575765266
+
+
+create the following files in the public directory:
+// demo.html
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>Twilio Client Quickstart</title>
+    <link rel="stylesheet" href="site.css">
+  </head>
+  <body>
+    <div id="controls">
+      <div id="info">
+        <p class="instructions">Twilio Client</p>
+        <div id="client-name"></div>
+        <div id="output-selection">
+          <label>Ringtone Devices</label>
+          <select id="ringtone-devices" multiple></select>
+          <label>Speaker Devices</label>
+          <select id="speaker-devices" multiple></select><br/>
+          <a id="get-devices">Seeing unknown devices?</a>
+        </div>
+      </div>
+      <div id="call-controls">
+        <p class="instructions">Make a Call:</p>
+        <input id="phone-number" type="text" placeholder="Enter a phone # or client name" />
+        <button id="button-call">Call</button>
+        <button id="button-hangup">Hangup</button>
+        <div id="volume-indicators">
+          <label>Mic Volume</label>
+          <div id="input-volume"></div><br/><br/>
+          <label>Speaker Volume</label>
+          <div id="output-volume"></div>
+        </div>
+      </div>
+      <div id="log"></div>
+    </div>
+
+    <script type="text/javascript" src="//media.twiliocdn.com/sdk/js/client/v1.4/twilio.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="quickstart.js"></script>
+  </body>
+  </html>
+
+// quickstart.js
+  $(function () {
+    var speakerDevices = document.getElementById('speaker-devices');
+    var ringtoneDevices = document.getElementById('ringtone-devices');
+    var outputVolumeBar = document.getElementById('output-volume');
+    var inputVolumeBar = document.getElementById('input-volume');
+    var volumeIndicators = document.getElementById('volume-indicators');
+
+    log('Requesting Capability Token...');
+    $.getJSON('/token')
+      .done(function (data) {
+        log('Got a token.');
+        console.log('Token: ' + data.token);
+
+        // Setup Twilio.Device
+        Twilio.Device.setup(data.token);
+
+        Twilio.Device.ready(function (device) {
+          log('Twilio.Device Ready!');
+          document.getElementById('call-controls').style.display = 'block';
+        });
+
+        Twilio.Device.error(function (error) {
+          log('Twilio.Device Error: ' + error.message);
+        });
+
+        Twilio.Device.connect(function (conn) {
+          log('Successfully established call!');
+          document.getElementById('button-call').style.display = 'none';
+          document.getElementById('button-hangup').style.display = 'inline';
+          volumeIndicators.style.display = 'block';
+          bindVolumeIndicators(conn);
+        });
+
+        Twilio.Device.disconnect(function (conn) {
+          log('Call ended.');
+          document.getElementById('button-call').style.display = 'inline';
+          document.getElementById('button-hangup').style.display = 'none';
+          volumeIndicators.style.display = 'none';
+        });
+
+        Twilio.Device.incoming(function (conn) {
+          log('Incoming connection from ' + conn.parameters.From);
+          var archEnemyPhoneNumber = '+12099517118';
+
+          if (conn.parameters.From === archEnemyPhoneNumber) {
+            conn.reject();
+            log('It\'s your nemesis. Rejected call.');
+          } else {
+            // accept the incoming connection and start two-way audio
+            conn.accept();
+          }
+        });
+
+        setClientNameUI(data.identity);
+
+        Twilio.Device.audio.on('deviceChange', updateAllDevices);
+
+        // Show audio selection UI if it is supported by the browser.
+        if (Twilio.Device.audio.isSelectionSupported) {
+          document.getElementById('output-selection').style.display = 'block';
+        }
+      })
+      .fail(function () {
+        log('Could not get a token from server!');
+      });
+
+    // Bind button to make call
+    document.getElementById('button-call').onclick = function () {
+      // get the phone number to connect the call to
+      var params = {
+        To: document.getElementById('phone-number').value
+      };
+
+      console.log('Calling ' + params.To + '...');
+      Twilio.Device.connect(params);
+    };
+
+    // Bind button to hangup call
+    document.getElementById('button-hangup').onclick = function () {
+      log('Hanging up...');
+      Twilio.Device.disconnectAll();
+    };
+
+    document.getElementById('get-devices').onclick = function() {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(updateAllDevices);
+    };
+
+    speakerDevices.addEventListener('change', function() {
+      var selectedDevices = [].slice.call(speakerDevices.children)
+        .filter(function(node) { return node.selected; })
+        .map(function(node) { return node.getAttribute('data-id'); });
+
+      Twilio.Device.audio.speakerDevices.set(selectedDevices);
+    });
+
+    ringtoneDevices.addEventListener('change', function() {
+      var selectedDevices = [].slice.call(ringtoneDevices.children)
+        .filter(function(node) { return node.selected; })
+        .map(function(node) { return node.getAttribute('data-id'); });
+
+      Twilio.Device.audio.ringtoneDevices.set(selectedDevices);
+    });
+
+    function bindVolumeIndicators(connection) {
+      connection.volume(function(inputVolume, outputVolume) {
+        var inputColor = 'red';
+        if (inputVolume < .50) {
+          inputColor = 'green';
+        } else if (inputVolume < .75) {
+          inputColor = 'yellow';
+        }
+
+        inputVolumeBar.style.width = Math.floor(inputVolume * 300) + 'px';
+        inputVolumeBar.style.background = inputColor;
+
+        var outputColor = 'red';
+        if (outputVolume < .50) {
+          outputColor = 'green';
+        } else if (outputVolume < .75) {
+          outputColor = 'yellow';
+        }
+
+        outputVolumeBar.style.width = Math.floor(outputVolume * 300) + 'px';
+        outputVolumeBar.style.background = outputColor;
+      });
+    }
+
+    function updateAllDevices() {
+      updateDevices(speakerDevices, Twilio.Device.audio.speakerDevices.get());
+      updateDevices(ringtoneDevices, Twilio.Device.audio.ringtoneDevices.get());
+    }
+  });
+
+  // Update the available ringtone and speaker devices
+  function updateDevices(selectEl, selectedDevices) {
+    selectEl.innerHTML = '';
+    Twilio.Device.audio.availableOutputDevices.forEach(function(device, id) {
+      var isActive = (selectedDevices.size === 0 && id === 'default');
+      selectedDevices.forEach(function(device) {
+        if (device.deviceId === id) { isActive = true; }
+      });
+
+      var option = document.createElement('option');
+      option.label = device.label;
+      option.setAttribute('data-id', id);
+      if (isActive) {
+        option.setAttribute('selected', 'selected');
+      }
+      selectEl.appendChild(option);
+    });
+  }
+
+  // Activity log
+  function log(message) {
+    var logDiv = document.getElementById('log');
+    logDiv.innerHTML += '<p>&gt;&nbsp;' + message + '</p>';
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  // Set the client name in the UI
+  function setClientNameUI(clientName) {
+    var div = document.getElementById('client-name');
+    div.innerHTML = 'Your client name: <strong>' + clientName +
+      '</strong>';
+  }
+
+// site.css
+  @import url(https://fonts.googleapis.com/css?family=Share+Tech+Mono);
+
+  body,
+  p {
+    padding: 0;
+    margin: 0;
+  }
+
+  body {
+    background: #272726;
+  }
+
+  label {
+    text-align: left;
+    font-family: Helvetica, sans-serif;
+    font-size: 1.25em;
+    color: #777776;
+    display: block;
+  }
+
+  div#controls {
+    padding: 3em;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+    div#controls div {
+      float: left;
+    }
+
+      div#controls div#call-controls,
+      div#controls div#info {
+        width: 16em;
+        margin: 0 1.5em;
+        text-align: center;
+      }
+        div#controls div#info div#output-selection {
+          display: none;
+        }
+
+        div#controls div#info a {
+          font-size: 1.1em;
+          color: khaki;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+
+        div#controls div#info select {
+          width: 300px;
+          height: 60px;
+          margin-bottom: 2em;
+        }
+
+        div#controls div#info label {
+          width: 300px;
+        }
+
+        div#controls div#call-controls div#volume-indicators {
+          display: none;
+          padding: 10px;
+          margin-top: 20px;
+          width: 500px;
+          text-align: left;
+        }
+
+          div#controls div#call-controls div#volume-indicators > div {
+            display: block;
+            height: 20px;
+            width: 0;
+          }
+
+    div#controls p.instructions {
+      text-align: left;
+      margin-bottom: 1em;
+      font-family: Helvetica-LightOblique, Helvetica, sans-serif;
+      font-style: oblique;
+      font-size: 1.25em;
+      color: #777776;
+    }
+
+    div#controls div#info #client-name {
+      text-align: left;
+      margin-bottom: 1em;
+      font-family: "Helvetica Light", Helvetica, sans-serif;
+      font-size: 1.25em;
+      color: #777776;
+    }
+
+    div#controls button {
+      width: 15em;
+      height: 2.5em;
+      margin-top: 1.75em;
+      border-radius: 1em;
+      font-family: "Helvetica Light", Helvetica, sans-serif;
+      font-size: .8em;
+      font-weight: lighter;
+      outline: 0;
+    }
+
+      div#controls button:active {
+        position: relative;
+        top: 1px;
+      }
+
+    div#controls div#call-controls {
+      display: none;
+    }
+
+      div#controls div#call-controls input {
+        font-family: Helvetica-LightOblique, Helvetica, sans-serif;
+        font-style: oblique;
+        font-size: 1em;
+        width: 100%;
+        height: 2.5em;
+        padding: .5em;
+        display: block;
+      }
+
+      div#controls div#call-controls button {
+        color: #fff;
+        background: 0 0;
+        border: 1px solid #686865;
+      }
+
+        div#controls div#call-controls button#button-hangup {
+          display: none;
+        }
+
+    div#controls div#log {
+      border: 1px solid #686865;
+      width: 35%;
+      height: 9.5em;
+      margin-top: 2.75em;
+      text-align: left;
+      padding: 1.5em;
+      float: right;
+      overflow-y: scroll;
+    }
+
+      div#controls div#log p {
+        color: #686865;
+        font-family: 'Share Tech Mono', 'Courier New', Courier, fixed-width;
+        font-size: 1.25em;
+        line-height: 1.25em;
+        margin-left: 1em;
+        text-indent: -1.25em;
+        width: 90%;
+      }
+
+==============================================================================
+run your localhost on 3000 (npm start), your express server on 5000 (node server.js)
+and ngrok on 3000 (./ngrok http 3000), then point your browser to "http://localhost:3000/demo.html"
+

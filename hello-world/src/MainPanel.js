@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import MessageList from './MessageList';
 import './MainPanel.css';
 import MessageForm from './MessageForm';
+import Dailer from './Dailer';
 
 class MainPanel extends Component {
   constructor(props) {
@@ -22,6 +23,7 @@ class MainPanel extends Component {
       <div className="MainPanel" style={{width: '100%', height: '100%'}}>
         <MessageList messages={this.state.messages} />
         <MessageForm onMessageSend={this.handleNewMessage} />
+        <Dailer />
       </div>
     );
   }

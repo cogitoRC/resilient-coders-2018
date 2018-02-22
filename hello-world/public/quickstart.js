@@ -153,6 +153,7 @@ function updateDevices(selectEl, selectedDevices) {
 
 // Activity log
 function log(message) {
+  console.log9
   var logDiv = document.getElementById('log');
   logDiv.innerHTML += '<p>&gt;&nbsp;' + message + '</p>';
   logDiv.scrollTop = logDiv.scrollHeight;

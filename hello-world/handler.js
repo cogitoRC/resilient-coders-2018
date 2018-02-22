@@ -27,18 +27,22 @@ exports.tokenGenerator = function tokenGenerator() {
 exports.voiceResponse = function voiceResponse(toNumber) {
   // Create a TwiML voice response
   const twiml = new VoiceResponse();
+  console.log(toNumber);
 
   if(toNumber) {
     // Wrap the phone number or client name in the appropriate TwiML verb
     // if is a valid phone number
     const attr = isAValidPhoneNumber(toNumber) ? 'number' : 'client';
-
+    console.log(`attr: ${attr}`);
     const dial = twiml.dial({
       callerId: config.callerId,
     });
     dial[attr]({}, toNumber);
   } else {
-    twiml.say('Thanks for calling!');
+    const say = 'Hey Sid, how do you like my demo?  Both Kordel and Julie have worked so hard on this and it is such exciting work they have done!';
+    // const say = 'Thanks for calling Cogito!';
+    twiml.say(say);
+    // twiml.say('Thanks for calling!');
   }
 
   return twiml.toString();

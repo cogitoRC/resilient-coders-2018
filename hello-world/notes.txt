@@ -552,5 +552,19 @@ create the following files in the public directory:
 
 ==============================================================================
 run your localhost on 3000 (npm start), your express server on 5000 (node server.js)
-and ngrok on 3000 (./ngrok http 3000), then point your browser to "http://localhost:3000/demo.html"
+and ngrok on 5000 (./ngrok http 5000), then point your browser to "http://localhost:3000"
+
+Go to https://www.twilio.com/console/phone-numbers/runtime/twiml-apps/AP999fdb43db9a98c1c823accb5f2f45ea
+
+and enter the ngrok URL plus "/voice" at the end in the Voice Request URL (should stay set at POST).
+for example, it would be "http://3dddf0b9.ngrok.io/voice" for my most recently running ngrok.  Be sure
+to hit Save
+
+Then, enter a 617 phone number (my number personal phone number worked) and it will
+dial that number
+
+If you leave the number input blank it will play back a message of your choice (defined
+in "handler.js").  Currently that message is: 'Hey Sid, how do you like my demo?  Both Kordel and Julie have worked so hard on this and it is such exciting work they have done!';'
+
+
 

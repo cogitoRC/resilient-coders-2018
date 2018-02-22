@@ -13,6 +13,7 @@ router.get('/token', (req, res) => {
 });
 
 router.post('/voice', (req, res) => {
+  console.log('received incoming voice call');
   res.set('Content-Type', 'text/xml');
   res.send(voiceResponse(req.body.To));
 });
